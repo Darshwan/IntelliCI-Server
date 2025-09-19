@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IntelliCI Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>IntelliCI Dashboard</h1>
+            <p>Real-time build monitoring</p>
+        </header>
+
+        <div class="stats">
+            <div class="stat-card">
+                <h3>Total Builds</h3>
+                <span id="total-builds">0</span>
+            </div>
+            <div class="stat-card">
+                <h3>Success Rate</h3>
+                <span id="success-rate">0%</span>
+            </div>
+            <div class="stat-card">
+                <h3>Avg. Duration</h3>
+                <span id="avg-duration">0s</span>
+            </div>
+        </div>
+
+        <div class="build-list">
+            <h2>Recent Builds</h2>
+            <div id="builds-container">
+                <!-- Build cards will be inserted here -->
+            </div>
+        </div>
+
+        <div class="current-build" id="current-build" style="display: none;">
+            <h2>Live Build Output</h2>
+            <div class="build-output" id="build-output"></div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="dashboard.js"></script>
+</body>
+</html>

@@ -1,0 +1,174 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #0d1117;
+    color: #e6edf3;
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 30px;
+    padding: 20px;
+    background: #161b22;
+    border-radius: 10px;
+}
+
+.stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.stat-card {
+    background: #161b22;
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.stat-card h3 {
+    color: #7d8590;
+    margin-bottom: 10px;
+}
+
+.stat-card span {
+    font-size: 24px;
+    font-weight: bold;
+    color: #2f81f7;
+}
+
+.build-list {
+    margin-bottom: 30px;
+}
+
+.build-card {
+    background: #161b22;
+    margin: 10px 0;
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 4px solid #7d8590;
+}
+
+.build-card.success {
+    border-left-color: #3fb950;
+}
+
+.build-card.failure {
+    border-left-color: #f85149;
+}
+
+.build-card.pending {
+    border-left-color: #d29922;
+}
+
+.build-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.build-info {
+    flex-grow: 1;
+}
+
+.build-repo {
+    font-weight: bold;
+    color: #4b96ff;
+}
+
+.build-branch { 
+    color: #7d8590;
+    font-size: 14px;
+}
+
+.build-status {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.status-success {
+    background: #3fb950;
+    color: black;
+}
+
+.status-failure {
+    background: #f85149;
+    color: white;
+}
+
+.status-pending {
+    background: #f9ac07;
+    color: black;
+}
+
+.current-build {
+    background: #161b22;
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 30px;
+}
+
+.build-output {
+    background: #0d1117;
+    padding: 15px;
+    border-radius: 6px;
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 12px;
+    height: 300px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+}
+
+.build-output::-webkit-scrollbar {
+    width: 6px;
+}
+
+.build-output::-webkit-scrollbar-track {
+    background: #161b22;
+}
+
+.build-output::-webkit-scrollbar-thumb {
+    background: #30363d;
+    border-radius: 3px;
+}
+
+/* public/style.css */
+.error-message {
+  background: #f85149;
+  color: white;
+  padding: 20px;
+  border-radius: 8px;
+  text-align: center;
+  margin: 20px 0;
+}
+
+.error-message button {
+  background: white;
+  color: #f85149;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 10px;
+  font-weight: bold;
+}
+
+.error-message button:hover {
+  background: #f0f0f0;
+}

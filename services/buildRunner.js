@@ -4,6 +4,7 @@ import simpleGit from 'simple-git'
 import Build from '../models/Build.js'
 import { spawn } from 'child_process'
 import { fileURLToPath } from 'url'
+import { io } from '../index.js'
 
 // __dirname for ES modules
 const __filename = fileURLToPath(import.meta.url)
@@ -11,7 +12,7 @@ const __dirname = path.dirname(__filename)
 const TEMP_DIR = path.join(__dirname, '../temp_repos')
 
 // Ensure TEMP_DIR exists
-fs.mkdir(TEMP_DIR, { recursive: true }).catch(() => {})
+fs.mkdir(TEMP_DIR, { recursive: true }).catch(() => { })
 
 export async function runBuild(buildId, repoUrl, branch = 'main') {
     console.log(`Starting build #${buildId} for ${repoUrl}`)
@@ -21,6 +22,8 @@ export async function runBuild(buildId, repoUrl, branch = 'main') {
         console.error(`Build with ID #${buildId} not found in database.`)
         return
     }
+    // Notify clients of new build
+    io.emit('new-build', build)
 
     const repoName = repoUrl.split('/').pop().replace('.git', '')
     const buildPath = path.join(TEMP_DIR, repoName, buildId.toString())
@@ -44,7 +47,7 @@ export async function runBuild(buildId, repoUrl, branch = 'main') {
             '--single-branch',
             '--depth', '1'
         ])
-
+        await Build.findByIdAndUpdate(buildId, { status: 'running' });
         const repo = simpleGit(buildPath)
         const branches = await repo.branch()
         build.output += `Cloned and checked out branch: ${branches.current}\n`
@@ -53,6 +56,7 @@ export async function runBuild(buildId, repoUrl, branch = 'main') {
 
         // 4 Install dependencies
         build.output += `Installing dependencies...\n`
+        await build.save()
         console.log(`Installing dependencies for build #${buildId}...`)
         const installSuccess = await runCommand(buildPath, 'npm install --legacy-peer-deps', build)
         if (!installSuccess) throw new Error('Dependency installation failed')
@@ -71,6 +75,8 @@ export async function runBuild(buildId, repoUrl, branch = 'main') {
         build.duration = duration
         build.conclusion = testSuccess ? 'All tests passed' : 'Some tests failed'
         await build.save()
+        // Notify clients of build completion
+        io.emit('build-complete', build)
 
         console.log(`Build #${buildId} completed with status: ${build.status} in ${duration}ms`)
     } catch (error) {
@@ -80,6 +86,12 @@ export async function runBuild(buildId, repoUrl, branch = 'main') {
         build.output += `\nERROR: ${error.message}\n`
         build.conclusion = 'failure'
         await build.save()
+        // Notify on error too
+        io.emit('build-error', {
+            buildId: buildId,
+            error: error.message
+        });
+
     }
 }
 
@@ -121,6 +133,12 @@ async function runCommand(cwd, command, build) {
             process.stdout.write(text)
             build.output += text
             scheduleSave()
+
+            // Emit real-time update via WebSocket
+            io.emit('build-update', {
+                builtId: build._id,
+                output: text
+            })
         })
 
         // STDERR

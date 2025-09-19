@@ -42,3 +42,16 @@ export const getBuildStatus = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 }
+
+export const getBuilds = async (req, res) => {
+    try {
+        const limit = parseInt(req.query.limit) || 10;
+        const builds = await Build.find()
+            .sort({ createdAt: -1 })
+            .limit(limit);
+
+        res.json(builds);
+    } catch (error) {
+        res.status(500).json({ error: "Failed to fetch builds" });
+    }
+}
