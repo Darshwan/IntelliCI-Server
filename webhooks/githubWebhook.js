@@ -1,7 +1,6 @@
-import runBuild from "../services/buildRunner";
+import runBuild from "../services/buildRunner.js";
 import crypto from 'crypto';
-import Build from '../models/Build.js';
-import { runBuild } from '../services/buildRunner.js';
+import Build from "../models/Build.js";
 
 export function verifyGitHubSignature(req, secret) {
     const signature = req.headers['x-hub-signature-256']
@@ -11,6 +10,7 @@ export function verifyGitHubSignature(req, secret) {
         console.warn('Missing signature or secret');
         return false;
     }
+    console.log("GitHub signature:", signature);
 
     const hmac = crypto.createHmac('sha256', secret)
     const digest = 'sha256=' + hmac.update(payload).digest('hex')
@@ -19,6 +19,7 @@ export function verifyGitHubSignature(req, secret) {
         Buffer.from(signature),
         Buffer.from(digest)
     )
+    console.log("Our digest:", digest);
 }
 
 // Extract the relevant information from the webhook payload
@@ -36,7 +37,7 @@ export function parseWebhookPayload(body) {
         repoUrl: repository.clone_url,
         branch: branch,
         commit: head_commit ? {
-            hash: head_commit, id,
+            hash: head_commit.id,
             message: head_commit.message,
             author: head_commit.author?.name || 'unknown'
         } : null
@@ -96,4 +97,12 @@ export async function handleGitHubWebhook(req, res) {
             details: error.message
         });
     }
+}
+
+export function webhookHealthCheck(req, res) {
+  res.json({
+    service: 'github-webhook-handler',
+    status: 'active',
+    timestamp: new Date().toISOString()
+  });
 }
