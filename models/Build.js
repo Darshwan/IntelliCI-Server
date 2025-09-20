@@ -16,7 +16,7 @@ const buildSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['pending', 'success', 'failure', 'error'],
+        enum: ['pending', 'running', 'success', 'failure', 'error'],
         default: 'pending'
     },
     output: {
