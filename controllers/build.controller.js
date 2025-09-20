@@ -1,8 +1,9 @@
 import Build from '../models/Build.js';
 
-
 export const startBuild = async (req, res) => {
     try {
+        const io = req.app.locals.io;
+        
         const { repoUrl, branch = 'main' } = req.body
 
         if (!repoUrl) {
@@ -19,7 +20,7 @@ export const startBuild = async (req, res) => {
 
         // Run the build process asynchronously
         const { runBuild } = await import('../services/buildRunner.js')
-        runBuild(newBuild._id, repoUrl, branch)
+        runBuild(newBuild._id, repoUrl, branch, io)
         res.json({
             message: 'Build started!',
             buildId: newBuild._id,

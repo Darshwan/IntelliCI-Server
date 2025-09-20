@@ -6,15 +6,14 @@
   "type": "module",
   "nodemonConfig": {
     "ignore": [
-      "node_modules",
-      "logs",
-      "temp"
+      "temp_repos/**/*",
+      "temp/**/*"
     ]
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node index.js",
-    "dev": "nodemon index.js"
+    "dev": "nodemon --ignore temp_repos/ --ignore temp/ index.js"
   },
   "keywords": [],
   "author": "",

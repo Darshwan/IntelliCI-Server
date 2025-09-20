@@ -47,6 +47,7 @@ export function parseWebhookPayload(body) {
 // Main WebHook Handler
 
 export async function handleGitHubWebhook(req, res) {
+    const io = req.app.locals.io;
     const WEBHOOK_SECRET = process.env.GITHUB_WEBHOOK_SECRET
     const eventType = req.headers['x-github-event']
 
@@ -80,7 +81,7 @@ export async function handleGitHubWebhook(req, res) {
         await newBuild.save()
 
         // 5 Start the build process asynchronously
-        runBuild(newBuild._id, repoUrl, branch)
+        runBuild(newBuild._id, repoUrl, branch, io)
 
         // 6 Respond to Github immediately
         res.status(202).json({
