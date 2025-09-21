@@ -4,6 +4,8 @@ import simpleGit from 'simple-git';
 import Build from '../models/Build.js';
 import { exec } from 'child_process';
 import { fileURLToPath } from 'url';
+import { Notifier } from './notifier.js';
+import { BuildLogger } from './logger.js';
 
 // __dirname equivalent for ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -29,10 +31,11 @@ export async function runBuild(buildId, repoUrl, branch = 'main', io) {
         console.error('IO instance is undefined! Cannot emit real-time updates');
         // You might want to throw an error or handle this differently
         throw new Error('Socket.io instance not provided');
-    }else {
+    } else {
         console.log(`io is present!`)
     }
     console.log(`Starting build #${buildId} for ${repoUrl}`);
+    const logger = new BuildLogger(buildId);
 
     // Fetch build document from database
     const build = await Build.findById(buildId);
@@ -40,7 +43,8 @@ export async function runBuild(buildId, repoUrl, branch = 'main', io) {
         console.error(`Build with ID #${buildId} not found in database`);
         return;
     }
-
+    const notifier = new Notifier();
+    const buildLogger = new BuildLogger(buildId);
     const repoName = repoUrl.split('/').pop().replace('.git', '');
     const buildPath = path.join(TEMP_DIR, repoName, buildId.toString());
 
@@ -54,6 +58,7 @@ export async function runBuild(buildId, repoUrl, branch = 'main', io) {
         build.status = 'pending';
         build.output = 'Starting build process...\n';
         await build.save();
+        await logger.write(`> Starting build for ${repoUrl}#${branch}\n`);
         io.emit('new-build', build);
 
         // ---------------------------
@@ -76,13 +81,15 @@ export async function runBuild(buildId, repoUrl, branch = 'main', io) {
         build.status = 'running';
         build.output += `Cloned and checked out branch: ${branchInfo.current}\n`;
         await build.save();
-        console.log(`🌿 Cloned branch: ${branchInfo.current}`);
+        console.log(`Cloned branch: ${branchInfo.current}`);
+        await logger.write("> Cloning repository...\n");
 
         // ---------------------------
         // 3. INSTALL DEPENDENCIES
         // ---------------------------
         build.output += `Installing dependencies...\n`;
         await build.save();
+        await logger.write("> Installing dependencies...\n");
 
         // Debug information
         console.log(`Build path: ${buildPath}`);
@@ -107,6 +114,7 @@ export async function runBuild(buildId, repoUrl, branch = 'main', io) {
         // ---------------------------
         build.output += `Running tests...\n`;
         await build.save();
+        await logger.write("> Running tests...\n");
 
         const startTime = Date.now();
         const testSuccess = await runCommand(buildPath, 'npm test', build, io, 180000);
@@ -121,8 +129,11 @@ export async function runBuild(buildId, repoUrl, branch = 'main', io) {
 
         await build.save();
         io.emit('build-complete', build);
-
+        if (build.status === 'success' || build.status === 'failure') {
+            await notifier.sendBuildNotification(build, [`lamichhane3848@gmail.com`]);
+        }
         console.log(`Build #${buildId} finished with status: ${build.status} in ${duration}ms`);
+        await logger.write("> Build completed successfully\n");
 
     } catch (error) {
         // ---------------------------

@@ -34,4 +34,7 @@ const buildSchema = new mongoose.Schema({
 )
 
 buildSchema.index({ repo: 1, branch: 1, createdAt: -1 })
+buildSchema.index({ repo: 1, status: 1 });
+buildSchema.index({ createdAt: -1 });
+buildSchema.index({ status: 1, createdAt: -1 });
 export default mongoose.model('Build', buildSchema)
