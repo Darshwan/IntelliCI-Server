@@ -1,0 +1,22 @@
+version: '3.8'
+services:
+  server:
+    build: .            # Uses Dockerfile in current folder → builds an image
+    ports:
+      - "5000:5000"     # Maps container port 5000 → host port 5000
+    env_file:
+      - .env            # Injects environment variables from .env file
+    depends_on:
+      - mongo
+      - redis           # Ensures Mongo + Redis start first
+
+  mongo:
+    image: mongo:7      # Pulls official MongoDB image from Docker Hub
+    volumes:
+      - mongo_data:/data/db  # Persists database data outside container
+
+  redis:
+    image: redis:7-alpine   # Pulls official Redis image
+
+volumes:
+  mongo_data:            # Named volume → ensures data persists

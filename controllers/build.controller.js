@@ -1,10 +1,19 @@
 import Build from '../models/Build.js';
+import { buildQueue } from '../services/buildQueue.js';
+import mongoose from 'mongoose'
 
 export const startBuild = async (req, res) => {
     try {
         const io = req.app.locals.io;
-        
+
         const { repoUrl, branch = 'main' } = req.body
+        // Add to queue
+        const job = await buildQueue.add("build", {
+            repoUrl,
+            branch,
+            buildId: new mongoose.Types.ObjectId(),
+        });
+        
 
         if (!repoUrl) {
             return res.status(400).json({ error: 'repoUrl is required' });
@@ -23,6 +32,7 @@ export const startBuild = async (req, res) => {
         runBuild(newBuild._id, repoUrl, branch, io)
         res.json({
             message: 'Build started!',
+            jobId: job.id,
             buildId: newBuild._id,
             viewBuild: `http://localhost:${process.env.PORT}/api/builds/${newBuild._id}`
         })

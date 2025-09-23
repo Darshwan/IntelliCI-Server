@@ -6,10 +6,15 @@ import buildRoutes from "./routes/build.routes.js";
 import webHookRoutes from "./routes/webhook.route.js";
 import { Server as SocketIOServer } from "socket.io";
 import http from 'http'
+import Redis from "ioredis";
 
 configDotenv()
 const app = express()
 const server = http.createServer(app)
+const redis = new Redis(process.env.REDIS_URL)
+redis.on("connect", () => {
+    console.log("Connected to Redis!");
+});
 
 const io = new SocketIOServer(server, {
     cors: {
