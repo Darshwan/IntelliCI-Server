@@ -7,37 +7,34 @@ WORKDIR /app
 # Install build dependencies
 RUN apk add --no-cache python3 make g++
 
-# Copy package files and install dependencies
+# Copy package files and install ALL dependencies (including dev)
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm install
 
 # Copy source code
 COPY . .
 
-# Stage 2: Runner (Slim, secure)
+# Stage 2: Runner
 FROM node:22-alpine
 
 # Create non-root user for security
 RUN addgroup -g 1001 -S appgroup && \
     adduser -u 1001 -S appuser -G appgroup
 
-# Set working directory
 WORKDIR /app
 
-# Copy only necessary files from builder stage
-COPY --from=builder /app /app
+# Copy only necessary files from builder
+COPY --from=builder /app/package*.json ./
+RUN npm ci --only=production
 
-# Change ownership
-RUN chown -R appuser:appgroup /app
+COPY --from=builder /app/dist ./dist   
+COPY --from=builder /app/src ./src     
 
 # Switch to non-root user
 USER appuser
 
-# Expose application port
 EXPOSE 5000
-
-# Set environment variables (default values)
 ENV NODE_ENV=production
 
-# Start the app
-CMD ["node", "run", "dev"]
+# Start app in production
+CMD ["npm", "run", "start"]

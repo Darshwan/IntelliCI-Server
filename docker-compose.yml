@@ -16,7 +16,7 @@ services:
       - mongo_data:/data/db  # Persists database data outside container
 
   redis:
-    image: redis:7-alpine   # Pulls official Redis image
+    image: redis:latest   # Pulls official Redis image
 
 volumes:
   mongo_data:            # Named volume → ensures data persists

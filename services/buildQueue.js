@@ -1,7 +1,12 @@
 import { Queue, Worker } from "bullmq"
 import { runBuild } from "./buildRunner.js";
+import IORedis from "ioredis"
 
-const connection = { host: "localhost", port: 6379 };
+const connection = new IORedis(process.env.REDIS_URL, {
+  maxRetriesPerRequest: null,
+  enableReadyCheck: false,
+  tls: {},
+});
 
 export const buildQueue = new Queue("builds", { connection })
 

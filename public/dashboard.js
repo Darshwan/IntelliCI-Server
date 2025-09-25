@@ -1,37 +1,122 @@
+// WebSocket connection management
 const socket = io('http://localhost:3000');
-const buildsContainer = document.getElementById('builds-container');
-const buildOutput = document.getElementById('build-output');
-const currentBuildSection = document.getElementById('current-build');
-let currentBuildId = null;
+const connectionIndicator = document.getElementById('connection-indicator');
+const connectionText = document.getElementById('connection-text');
 
-// Simple animation for status indicators
+// UI state
+let autoScrollEnabled = true;
+let selectedBuildId = null;
+let logs = [];
+
+// DOM elements
+const buildsList = document.getElementById('builds-list');
+const buildDetails = document.getElementById('build-details');
+const logsContent = document.getElementById('logs-content');
+const autoScrollIndicator = document.getElementById('auto-scroll-indicator');
+
+// Initialize the dashboard
 document.addEventListener('DOMContentLoaded', function () {
-    const pendingItems = document.querySelectorAll('.status.pending, .status.running');
-
-    setInterval(() => {
-        pendingItems.forEach(item => {
-            item.classList.toggle('blink');
-        });
-    }, 2000);
-
     // Load initial builds
     loadBuildHistory();
+    // Set up socket event listeners
+    setupSocketListeners();
 });
 
-// Fetch initial builds
+// WebSocket event handlers
+function setupSocketListeners() {
+    socket.on('connect', () => {
+        console.log('Connected to server via WebSocket');
+        updateConnectionStatus(true);
+    });
+
+    socket.on('disconnect', () => {
+        console.log('Disconnected from server');
+        updateConnectionStatus(false);
+    });
+
+    socket.on('reconnect', () => {
+        console.log('Reconnected to server');
+        updateConnectionStatus(true);
+        // Reload data after reconnection
+        loadBuildHistory();
+    });
+
+    socket.on('new-build', (build) => {
+        console.log('New Build Started:', build);
+        addBuildCard(build);
+        updateMetrics();
+    });
+
+    socket.on('build-update', (data) => {
+        console.log('Build Update:', data);
+        updateBuildCard(data);
+
+        if (data.buildId === selectedBuildId) {
+            addLogLine(data.message);
+        }
+    });
+
+    socket.on('build-complete', (build) => {
+        console.log('Build Completed:', build);
+        updateBuildCard(build, true);
+        updateMetrics();
+    });
+}
+
+// Connection status management
+function updateConnectionStatus(connected) {
+    if (connected) {
+        connectionIndicator.classList.add('connected');
+        connectionText.textContent = 'Connected';
+    } else {
+        connectionIndicator.classList.remove('connected');
+        connectionText.textContent = 'Disconnected';
+    }
+}
+
+
+function scrollToBottom() {
+    if (autoScrollEnabled) {
+        logsContent.scrollTop = logsContent.scrollHeight;
+    }
+}
+
+// Log management
+function addLogLine(message) {
+    const logLine = document.createElement('div');
+    logLine.className = `log-line ${getLogClass(message)}`;
+    logLine.textContent = `> ${message}`;
+
+    logsContent.appendChild(logLine);
+    logs.push({ message, timestamp: new Date() });
+
+    scrollToBottom();
+}
+
+function clearLogs() {
+    logsContent.innerHTML = '';
+    logs = [];
+}
+
+function getLogClass(message) {
+    if (message.includes('error') || message.includes('fail') || message.includes('failed')) {
+        return 'log-error';
+    } else if (message.includes('success') || message.includes('pass') || message.includes('passed')) {
+        return 'log-success';
+    } else if (message.includes('warn') || message.includes('warning')) {
+        return 'log-warning';
+    } else {
+        return 'log-info';
+    }
+}
+
+// Build data management
 async function loadBuildHistory() {
     try {
         const response = await fetch('http://localhost:3000/api/builds?limit=10');
 
-        // Check if response is OK
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        // Check content type to ensure it's JSON
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-            throw new Error('Response is not JSON');
         }
 
         const builds = await response.json();
@@ -39,73 +124,134 @@ async function loadBuildHistory() {
         updateMetrics(builds);
     } catch (error) {
         console.error('Failed to load build history:', error);
-        // Show user-friendly error message
-        buildsContainer.innerHTML = `
-                    <div class="error-message">
-                        <h3>⚠️ Could not load build history</h3>
-                        <p>${error.message}</p>
+        buildsList.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <p>Failed to load builds</p>
                         <button onclick="loadBuildHistory()">Try Again</button>
                     </div>
                 `;
     }
 }
 
-// Render Builds
 function renderBuilds(builds) {
-    buildsContainer.innerHTML = builds.map(build => `
-                <div class="build-card ${build.status}" onclick="showBuildDetails('${build._id}')">
-                    <div class="repo-header">
-                        <div class="repo-name">
-                            <i class="fab fa-github"></i>
-                            ${build.repo}
-                        </div>
-                        <div class="branch">${build.branch}</div>
-                    </div>
-                    <div class="build-info">
-                        <div class="timestamp">
-                            <i class="far fa-calendar-alt"></i>
-                            ${formatDate(build.createdAt)}
-                        </div>
-                        <div class="status ${build.status}">
-                            <i class="${getStatusIcon(build.status)}"></i> ${build.status}
-                        </div>
-                    </div>
+    buildsList.innerHTML = builds.map(build => createBuildCard(build)).join('');
+}
+
+function createBuildCard(build) {
+    return `
+        <div class="build-card ${build.status}" data-build-id="${build._id}" onclick="selectBuild('${build._id}')">
+            <div class="build-header">
+                <div class="repo-info">
+                    <div class="repo-name">${build.repo}</div>
+                    <div class="branch">${build.branch}</div>
                 </div>
-            `).join('');
-}
-
-// Update metrics
-function updateMetrics(builds) {
-    const total = builds.length;
-    const successes = builds.filter(b => b.status === 'success').length;
-    const successRate = total > 0 ? Math.round((successes / total) * 100) : 0;
-    const activeBuilds = builds.filter(b => b.status === 'running' || b.status === 'pending').length;
-    const durations = builds.filter(b => b.duration).map(b => b.duration);
-    const avgDuration = durations.length > 0 ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length) : 0;
-
-    document.getElementById('total-builds').textContent = total;
-    document.getElementById('success-rate').textContent = `${successRate}%`;
-    document.getElementById('avg-duration').textContent = `${avgDuration}s`;
-    document.getElementById('active-builds').textContent = activeBuilds;
-}
-
-// Show build details
-async function showBuildDetails(buildId) {
-    try {
-        currentBuildId = buildId;
-
-        // Show loading state
-        currentBuildSection.innerHTML = `
-            <div class="detail-header">
-                <div class="detail-title">
-                    <i class="fas fa-spinner fa-spin"></i>
-                    Loading build details...
+                <div class="build-status status-${build.status}">
+                    <i class="${getStatusIcon(build.status)}"></i>
+                    ${build.status}
                 </div>
             </div>
-        `;
-        buildOutput.innerHTML = `<div class="output-line output-info">Loading build logs...</div>`;
+            <div class="build-meta">
+                <span><i class="far fa-clock"></i> ${formatDate(build.createdAt)}</span>
+                ${build.duration ? `<span class="duration"><i class="fas fa-hourglass-half"></i> ${formatDuration(build.duration)}</span>` : ''}
+            </div>
+        </div>
+    `;
+}
 
-        // Fetch build details from server
+function addBuildCard(build) {
+    const buildCard = document.createElement('div');
+    buildCard.className = `build-card ${build.status}`;
+    buildCard.setAttribute('data-build-id', build._id);
+    buildCard.onclick = () => selectBuild(build._id);
+    buildCard.innerHTML = `
+        <div class="build-header">
+            <div class="repo-info">
+                <div class="repo-name">${build.repo}</div>
+                <div class="branch">${build.branch}</div>
+            </div>
+            <div class="build-status status-${build.status}">
+                <i class="${getStatusIcon(build.status)}"></i>
+                ${build.status}
+            </div>
+        </div>
+        <div class="build-meta">
+            <span><i class="far fa-clock"></i> Just now</span>
+        </div>
+    `;
+
+    buildsList.insertBefore(buildCard, buildsList.firstChild);
+}
+
+function updateBuildCard(build, isComplete = false) {
+    console.log('Updating build card:', build);
+
+    const buildCards = document.querySelectorAll('.build-card');
+
+    for (const card of buildCards) {
+        // Get the build ID from the card's data attribute
+        const cardBuildId = card.getAttribute('data-build-id');
+
+        if (cardBuildId === build._id) {
+            // Update status
+            card.className = `build-card ${build.status}`;
+            const statusElement = card.querySelector('.build-status');
+            statusElement.className = `build-status status-${build.status}`;
+            statusElement.innerHTML = `
+                <i class="${getStatusIcon(build.status)}"></i>
+                ${build.status}
+            `;
+
+            // Update duration if complete
+            if (isComplete && build.duration) {
+                const metaElement = card.querySelector('.build-meta');
+                // Find and update duration or add it if it doesn't exist
+                let durationSpan = metaElement.querySelector('.duration');
+                if (durationSpan) {
+                    durationSpan.innerHTML = `<i class="fas fa-hourglass-half"></i> ${formatDuration(build.duration)}`;
+                } else {
+                    durationSpan = document.createElement('span');
+                    durationSpan.className = 'duration';
+                    durationSpan.innerHTML = `<i class="fas fa-hourglass-half"></i> ${formatDuration(build.duration)}`;
+                    metaElement.appendChild(durationSpan);
+                }
+            }
+
+            break;
+        }
+    }
+}
+
+function selectBuild(buildId) {
+    selectedBuildId = buildId;
+
+    // Highlight selected build
+    document.querySelectorAll('.build-card').forEach(card => {
+        card.style.borderLeftWidth = '4px';
+        card.style.opacity = '0.8';
+    });
+
+    const selectedCard = document.querySelector(`[data-build-id="${buildId}"]`);
+    if (selectedCard) {
+        selectedCard.style.borderLeftWidth = '6px';
+        selectedCard.style.opacity = '1';
+    }
+
+    // Load build details
+    loadBuildDetails(buildId);
+}
+
+async function loadBuildDetails(buildId) {
+    try {
+        buildDetails.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>Loading build details...</p>
+                    </div>
+                `;
+
+        clearLogs();
+
         const response = await fetch(`http://localhost:3000/api/builds/${buildId}`);
 
         if (!response.ok) {
@@ -114,181 +260,95 @@ async function showBuildDetails(buildId) {
 
         const build = await response.json();
 
-        // Update build details section with real data
-        currentBuildSection.innerHTML = `
-            <div class="detail-header">
-                <div class="repo-name">
-                    <i class="fab fa-github"></i>
-                    ${build.repo}
-                </div>
-                <div class="branch">${build.branch}</div>
-                <div class="detail-meta">
-                    <div class="timestamp">
-                        <i class="far fa-calendar-alt"></i>
-                        ${formatDate(build.createdAt)}
+        // Display build details
+        buildDetails.innerHTML = `
+                    <div class="detail-item">
+                        <div class="detail-label">Repository</div>
+                        <div class="detail-value">${build.repo}</div>
                     </div>
-                    <div class="status ${build.status}">
-                        <i class="${getStatusIcon(build.status)}"></i> ${build.status}
+                    <div class="detail-item">
+                        <div class="detail-label">Branch</div>
+                        <div class="detail-value">${build.branch}</div>
                     </div>
-                </div>
-                ${build.duration ? `
-                <div class="duration" style="margin-top: 10px; color: #666;">
-                    <i class="fas fa-clock"></i> Duration: ${formatDuration(build.duration)}
-                </div>
-                ` : ''}
-            </div>
-        `;
+                    <div class="detail-item">
+                        <div class="detail-label">Status</div>
+                        <div class="detail-value">
+                            <span class="build-status status-${build.status}">
+                                <i class="${getStatusIcon(build.status)}"></i>
+                                ${build.status}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Started</div>
+                        <div class="detail-value">${formatDate(build.createdAt)}</div>
+                    </div>
+                    ${build.duration ? `
+                    <div class="detail-item">
+                        <div class="detail-label">Duration</div>
+                        <div class="detail-value">${build.duration > 60 ? `${Math.floor(build.duration / 6000)}m ${build.duration % 60}s` : `${build.duration}s`}</div>
+                    </div>
+                    ` : ''}
+                `;
 
-        // Fetch build logs from output field and split by newlines
-        const logs = build.output ? build.output.split('\n') : [];
-
-        // Display logs with proper formatting and > sign
-        buildOutput.innerHTML = logs.map(log => {
-            if (!log.trim()) return ''; // Skip empty lines
-            const logClass = getOutputClass(log);
-            // Add > sign at the beginning of each line
-            return `<div class="output-line ${logClass}">> ${log}</div>`;
-        }).join('');
-
-        // Scroll to bottom of output
-        buildOutput.scrollTop = buildOutput.scrollHeight;
+        // Load existing logs if any
+        if (build.output) {
+            const logs = build.output.split('\n');
+            logs.forEach(log => {
+                if (log.trim()) {
+                    addLogLine(log);
+                }
+            });
+        }
 
     } catch (error) {
         console.error('Failed to load build details:', error);
-
-        // Show error message
-        currentBuildSection.innerHTML = `
-            <div class="detail-header">
-                <div class="detail-title">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    Error Loading Build
-                </div>
-                <div style="color: #c62828; margin-top: 10px;">
-                    ${error.message}
-                </div>
-            </div>
-        `;
-
-        buildOutput.innerHTML = `
-            <div class="output-line output-error">> Failed to load build details: ${error.message}</div>
-            <div class="output-line output-info">> Please check your connection and try again</div>
-        `;
+        buildDetails.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <p>Failed to load build details</p>
+                    </div>
+                `;
     }
 }
 
-// Get status icon
+function updateMetrics(builds) {
+    // In a real app, we would calculate these from the builds data
+    // For this demo, we'll use placeholder values that update with new builds
+    console.log("Builds:", builds);
+    
+    const total = parseInt(document.getElementById('total-builds').textContent) + 1;
+    document.getElementById('total-builds').textContent = builds.length;
+
+    // Simulate metric updates
+    const successes = builds.filter(b => b.status === 'success').length;
+    const successRate = total > 0 ? Math.round((successes / total) * 100) : 0;
+    document.getElementById('success-rate').textContent = `${successRate / 10}%`;
+
+    const durations = builds.filter(b => b.duration).map(b => b.duration);
+    const avgDuration = durations.length > 0 ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length) : 0;
+    document.getElementById('avg-duration').textContent = `${avgDuration}ms`;
+
+    const activeBuilds = builds.filter(b => b.status === 'running' || b.status === 'pending').length;
+    document.getElementById('active-builds').textContent = activeBuilds;
+}
+
+// Utility functions
 function getStatusIcon(status) {
     switch (status) {
         case 'success': return 'fas fa-check-circle';
         case 'error': return 'fas fa-exclamation-circle';
         case 'pending': return 'fas fa-clock';
-        case 'running': return 'fas fa-sync-alt';
+        case 'running': return 'fas fa-sync-alt fa-spin';
         default: return 'fas fa-question-circle';
     }
 }
 
-// Socket.io event listeners 
-socket.on('connect', () => {
-    console.log('Connected to server via WebSocket');
-    // Add connection indicator to UI
-    const footer = document.querySelector('footer');
-    footer.innerHTML += ' • <span style="color: #4caf50;"><i class="fas fa-plug"></i> Connected</span>';
-});
-
-socket.on('disconnect', () => {
-    console.log('Disconnected from server');
-    // Update connection indicator
-    const footer = document.querySelector('footer');
-    if (footer.innerHTML.includes('Connected')) {
-        footer.innerHTML = footer.innerHTML.replace('• <span style="color: #4caf50;"><i class="fas fa-plug"></i> Connected</span>',
-            '• <span style="color: #f44336;"><i class="fas fa-plug"></i> Disconnected</span>');
-    }
-});
-
-socket.on('new-build', (build) => {
-    console.log('New Build Started:', build);
-    // Add to top of the build list
-    const buildElement = document.createElement('div');
-    buildElement.className = `build-card pending`;
-    buildElement.innerHTML = `
-                <div class="repo-header">
-                    <div class="repo-name">
-                        <i class="fab fa-github"></i>
-                        ${build.repo}
-                    </div>
-                    <div class="branch">${build.branch}</div>
-                </div>
-                <div class="build-info">
-                    <div class="timestamp">
-                        <i class="far fa-calendar-alt"></i>
-                        Just now
-                    </div>
-                    <div class="status pending">
-                        <i class="fas fa-clock"></i> pending
-                    </div>
-                </div>
-                <div>Build ID: ${build._id}</div>
-            `;
-    buildElement.onclick = function () {
-        showBuildDetails(build._id);
-    };
-    buildsContainer.insertBefore(buildElement, buildsContainer.firstChild);
-
-    // Update metrics
-    loadBuildHistory(); // Reload to get updated metrics
-});
-
-socket.on('build-update', (data) => {
-    console.log('Build Update:', data);
-    if (data.buildId === currentBuildId) {
-        const messageClass = getOutputClass(data.message);
-        buildOutput.innerHTML += `<div class="output-line ${messageClass}">> ${data.message}</div>`;
-        buildOutput.scrollTop = buildOutput.scrollHeight;
-    }
-});
-
-socket.on('build-complete', (build) => {
-    console.log('Build Completed: ', build);
-    // Update the build card status
-    const buildCards = document.querySelectorAll('.build-card');
-    if (buildCards.length > 0) {
-        // Find the card with matching ID (in a real app, you'd have IDs on the elements)
-        const firstCard = buildCards[0];
-        firstCard.className = `build-card ${build.status}`;
-        firstCard.querySelector('.status').className = `status ${build.status}`;
-        firstCard.querySelector('.status').innerHTML = `<i class="${getStatusIcon(build.status)}"></i> ${build.status}`;
-
-        if (build.duration) {
-            const durationDiv = firstCard.querySelector('.duration') || document.createElement('div');
-            durationDiv.className = 'duration';
-            durationDiv.textContent = `Duration: ${formatDuration(build.duration)}`;
-            if (!firstCard.querySelector('.duration')) {
-                firstCard.appendChild(durationDiv);
-            }
-        }
-    }
-
-    // Update metrics
-    loadBuildHistory(); // Reload to get updated metrics
-});
-
-// Utility Functions
 function formatDate(dateString) {
-    return new Date(dateString).toLocaleString();
+    const date = new Date(dateString);
+    return date.toLocaleString();
 }
 
 function formatDuration(ms) {
-    return `${Math.round(ms / 1000)}s`;
-}
-
-function getOutputClass(message) {
-    if (message.includes('error') || message.includes('fail') || message.includes('failed')) {
-        return 'output-error';
-    } else if (message.includes('success') || message.includes('pass') || message.includes('passed')) {
-        return 'output-success';
-    } else if (message.includes('warn') || message.includes('warning')) {
-        return 'output-warning';
-    } else {
-        return 'output-info';
-    }
+    return `${Math.floor(ms / 1000)}s`;
 }

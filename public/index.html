@@ -1,71 +1,83 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="style.css">
-    <title>Recent Builds Dashboard</title>
+    <title>CI/CD Dashboard</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
-    <div class="container">
-        <header>
-            <h1><i class="fas fa-code-branch"></i> CI/CD Dashboard</h1>
-            <p class="subtitle">Real-time build monitoring and analytics</p>
+    <div class="dashboard">
+        <header class="header">
+            <div class="logo">
+                <i class="fas fa-code-branch"></i>
+                <h1>CI/CD Dashboard</h1>
+            </div>
+            <div class="connection-status">
+                <div class="status-indicator" id="connection-indicator"></div>
+                <span id="connection-text">Connecting...</span>
+            </div>
         </header>
 
         <div class="metrics">
             <div class="metric-card">
                 <div class="metric-title">Total Builds</div>
                 <div class="metric-value metric-info" id="total-builds">0</div>
-                <div class="metric-desc">All time</div>
             </div>
             <div class="metric-card">
                 <div class="metric-title">Success Rate</div>
                 <div class="metric-value metric-success" id="success-rate">0%</div>
-                <div class="metric-desc">Last 30 days</div>
             </div>
             <div class="metric-card">
                 <div class="metric-title">Avg Duration</div>
                 <div class="metric-value metric-info" id="avg-duration">0s</div>
-                <div class="metric-desc">Last 30 days</div>
             </div>
             <div class="metric-card">
                 <div class="metric-title">Active Builds</div>
                 <div class="metric-value metric-warning" id="active-builds">0</div>
-                <div class="metric-desc">Running now</div>
             </div>
         </div>
 
-        <div class="content">
-            <div class="builds-container" id="builds-container">
-                <!-- Build cards will be inserted here -->
-            </div>
+        <div class="main-content">
+            <section class="builds-section">
+                <h2 class="section-title">
+                    <i class="fas fa-list"></i>
+                    Recent Builds
+                </h2>
+                <div class="builds-list" id="builds-list">
+                    <!-- Build cards will be inserted here -->
+                </div>
+            </section>
 
-            <div class="build-details">
-                <h2>Build Details</h2>
-                <div id="current-build">
-                    <div class="no-build-selected">
-                        <i class="fas fa-mouse-pointer fa-3x"></i>
+            <section class="details-panel" id="details-panel">
+                <div class="build-details" id="build-details">
+                    <div class="empty-state">
+                        <i class="fas fa-mouse-pointer"></i>
                         <p>Select a build to view details</p>
                     </div>
                 </div>
-
-                <div class="build-output" id="build-output">
-                    <!-- Build output will be inserted here -->
+                
+                <div class="logs-container">
+                    <div class="logs-header">
+                        <span>Build Logs</span>
+                    </div>
+                    <div class="logs-content" id="logs-content">
+                        <!-- Logs will be inserted here -->
+                    </div>
+                    <div class="auto-scroll-indicator" id="auto-scroll-indicator">
+                        Auto-scroll enabled
+                    </div>
                 </div>
-            </div>
+            </section>
         </div>
 
-        <footer>
-            <p>Real-time updates via WebSocket • <i class="fas fa-globe"></i> CI/CD Dashboard v2.0</p>
+        <footer class="footer">
+            <p>Real-time CI/CD Dashboard • v2.0</p>
         </footer>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script src="dashboard.js"></script>
+    <script src="/dashboard.js"></script>
 </body>
-
 </html>
