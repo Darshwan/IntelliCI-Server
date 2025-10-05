@@ -18,3 +18,30 @@ graph TB
     IntelliCI --> BuildRunner[Build Runner];
     BuildRunner --> Dashboard[Real-time Dashboard];
     Dashboard --> User[User];
+```
+## Getting Started Follow these steps to set up IntelliCI locally:
+Follow these steps to set up IntelliCI locally:
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/intellici.git
+cd intellici
+
+# Install dependencies
+npm install
+
+# Edit .env with your configuration
+
+# Start the server
+npm run dev
+```
+### How It Works
+
+1. Push code to GitHub → triggers a webhook to IntelliCI
+
+2. Webhook handler validates
+
+3.	Build Runner executes your pipeline (npm install && npm test)
+
+4.	Logs stream to dashboard in real-time
+
+5.	Results saved in MongoDB for build history
