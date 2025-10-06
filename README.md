@@ -45,3 +45,14 @@ npm run dev
 4.	Logs stream to dashboard in real-time
 
 5.	Results saved in MongoDB for build history
+
+## License
+MIT License
+
+## Documentation
+
+*   [API Reference](https://github.com/Darshwan/IntelliCI-Server/blob/master/docs/API_REFERENCE.md)
+*       
+
+🛠️ Usage
+---------

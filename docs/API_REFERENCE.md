@@ -49,3 +49,35 @@ GET /api/builds/:buildId
 ```http
 GET /api/builds?limit=10
 ```
+### Webhook Endpoints
+GitHub Webhook
+```http
+POST /webhook/github
+Content-Type: application/json
+X-GitHub-Event: push
+X-Hub-Signature-256: sha256=...
+```
+```json
+{
+  "repository": { ... },
+  "ref": "refs/heads/main",
+  "head_commit": { ... }
+}
+```
+
+### WebSocket Events
+
+#### Client Events
+
+*   request-builds - Request build history
+    
+
+#### Server Events
+
+*   new-build - New build started
+    
+*   build-update - Build progress update
+    
+*   build-complete - Build completed
+    
+*   build-error - Build failed
