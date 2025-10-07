@@ -23,7 +23,7 @@ graph TB
 Follow these steps to set up IntelliCI locally:
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/intellici.git
+git clone https://github.com/Darshwan/IntelliCI-Server.git
 cd intellici
 
 # Install dependencies
@@ -52,7 +52,7 @@ MIT License
 ## Documentation
 
 *   [API Reference](https://github.com/Darshwan/IntelliCI-Server/blob/master/docs/API_REFERENCE.md)
-*       
+*   [GitHub Webhook Setup Guide](https://github.com/Darshwan/IntelliCI-Server/blob/master/docs/WEBHOOK_SETUP.md)
 
 🛠️ Usage
 ---------
