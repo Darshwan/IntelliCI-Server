@@ -54,5 +54,17 @@ MIT License
 *   [API Reference](https://github.com/Darshwan/IntelliCI-Server/blob/master/docs/API_REFERENCE.md)
 *   [GitHub Webhook Setup Guide](https://github.com/Darshwan/IntelliCI-Server/blob/master/docs/WEBHOOK_SETUP.md)
 
-🛠️ Usage
----------
+ # Usage
+- Set up GitHub Webhook in your repository settings
+- Push code to trigger automated builds
+- Monitor builds in the real-time dashboard
+- View build history and metrics
+
+🤝 Contributing
+We welcome contributions! .
+
+📝 License
+This project is licensed under the MIT License - see the 
+[LICENSE file](https://github.com/Darshwan/IntelliCI-Server/blob/master/LICENSE) for details.
+
+# Don't Forget to Star this repo !!!
